@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2&display=swap" rel="stylesheet">
+    <title>숫자 맞추기 게임</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom right, #f0f4f8, #d9e2ec);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+
+            background-image: url("/static/images/jungle-bird.png");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        #result {
+            font-size: 20px;
+            font-weight: bold;
+            opacity: 0; /* 처음에는 안 보이게 */
+            transform: scale(0.8); /* 살짝 작게 시작 */
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .show {
+            opacity: 1;
+            transform: scale(1); /* 점점 커지면서 나타남 */
+        }
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .game-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            margin: auto;
+            
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .last-guess-number {
+            font-family: 'Baloo 2', 'Comic Sans MS', cursive;
+            font-size: 24px;
+            color: #2c3e50;
+            background-color: #fef3c7; /* 밝은 노랑 배경 (더 잘 보임) */
+            padding: 6px 16px;
+            border-radius: 25px;
+            display: inline-block;
+            margin-bottom: 14px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 80%;
+            border: 2px solid #fcd34d; /* 부드러운 테두리 */
+        }
+
+        /* 말풍선 꼬리 */
+        .last-guess-number::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: #fef3c7 transparent transparent transparent;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            font-size: 16px;
+            width: calc(100% = 30px);
+            margin: 10px 0;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            transition: border 0.3s;
+        }
+
+        input[type="number"]:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        button {
+            background-color: #4a90e2;
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #357ab7;
+        }
+
+        #result {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 24px;
+            transition: all 0.5s ease;
+        }
+
+        .success {
+            color: #27ae60;
+        }
+
+        .fail {
+            color: #c0392b;
+        }
+
+        #attempts {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        #toggleSound {
+            display: block;
+            margin: 8px auto 0;
+            font-size: 12px;
+            padding: 6px 12px;
+            background-color: #7f8c8d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+
+            text-decoration: none;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #toggleSound:hover {
+            background-color: #626e70;
+        }
+
+        #confetti {
+            position: fixed;
+            pointer-events: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            overflow: visible;
+        }
+
+        .confetti-piece {
+            position: fixed;
+            width: 14px;
+            height: 14px;
+            background-color: red;
+            opacity: 0.9;
+            border-radius: 50%;
+            animation: fall 1s ease-out forwards;
+            z-index: 9999;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+
+        .small-button {
+            background-color: transparent;
+            color: #4a90e2;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+            margin-top: 8px;
+            text-decoration: underline;
+            padding: 4px 8px;
+        }
+
+        .small-button:hover {
+            color: #357ab7;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <h1>숫자 맞추기 게임</h1>
+        <p>1부터 100 사이의 숫자를 맞혀보세요!</p>
+
+        <form id="guessForm">
+            <div style="text-align: center;">
+                <p id="lastGuess" class="last-guess-number"></p>
+            </div>
+            <input type="number" id="guess" placeholder="숫자 입력" required>
+            <button type="submit">제출</button>
+            <button type="button" id="toggleSound" class="small-button">🔈 효과음 끄기</button> <!-- 효과음 ON/OFF 버튼-->
+        </form>
+
+        <p id="result"></p>
+        <p id="attempts">시도 횟수: 0</p>
+
+        <button id="resetGame">새 게임 시작</button> <!-- 게임 리셋 버튼 -->        
+    </div>
+
+    <div id="confetti"></div>
+
+    <script>
+        const form = document.getElementById('guessForm');
+        const result = document.getElementById('result');
+        const attempts = document.getElementById('attempts');
+        const resetButton = document.getElementById('resetGame'); // 리셋 버튼
+        let attemptCount = 0;
+
+        // 배경음악
+        const bgMusic = new Audio('/static/sounds/bg-music-sample.mp3');
+        bgMusic.loop = true;
+        bgMusic.volume = 0.3;
+
+        let musicEnabled = true;
+
+        window.addEventListener('load', ()=>{
+            document.body.addEventListener('click', () => {
+                if (musicEnabled && bgMusic.paused) {
+                    bgMusic.play().catch(() =>{});
+                }
+            }, { once: true});
+        });
+
+
+        // 효과음 로드
+        const sounds = {
+            high: new Audio('/static/sounds/high.mp3'),
+            low: new Audio('/static/sounds/low.mp3'),
+            correct: new Audio('/static/sounds/correct.mp3')
+        };
+        sounds.high.volume = 0.5;
+        sounds.low.volume = 0.3;
+
+        let soundEnabled = true;
+
+        function playSound(sound) {
+            sound.pause();
+            sound.currentTime = 0;
+            sound.play();
+        }
+
+        document.getElementById('toggleSound').addEventListener('click', function(){
+            soundEnabled = !soundEnabled;
+            this.textContent = soundEnabled ? '🔈 효과음 끄기' : '🔇 효과음 켜기';
+        });
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            attemptCount++;
+            attempts.textContent = `시도 횟수: ${attemptCount}`;
+
+            const guessInput = document.getElementById('guess');
+            const guessValue = document.getElementById('guess').value;
+
+            fetch('/guess', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `guess=${guessValue}&attempts=${attemptCount}`
+            })
+            .then(response => response.json())
+            .then(data => {
+
+                document.getElementById('lastGuess').textContent = guessValue;
+
+                result.classList.remove('shake', 'show');
+                void result.offsetWidth;
+
+                result.textContent = data.message;
+                result.style.opacity = "1";
+
+                guessInput.value = '';
+                guessInput.focus();
+
+                // 약간의 시간차를 두고 애니메이션 적용 (50ms 지연)
+                setTimeout(() => {
+                    result.classList.add('show'); // 점점 커지는 애니메이션 적용
+                    if (data.message.includes('정답')) {
+                        result.classList.add('shake'); // 정답이면 흔들리는 효과 추가
+                        playSound(sounds.correct);
+
+                        const lastGuessElement = document.querySelector(".last-guess-number");
+                        if (lastGuessElement) {
+                            launchConfettiAtElement(lastGuessElement);
+                        }
+                    } else {
+                        if(soundEnabled){
+                            if (data.message.includes('낮춰야')) {
+                                playSound(sounds.low);
+                            } else if (data.message.includes('올려야')){
+                                playSound(sounds.high);
+                            }
+                        }
+                    }
+                }, 50);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        resetButton.addEventListener('click', function() {
+            fetch('/reset', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                result.textContent = data.message;
+                attemptCount = 0; // 시도 횟수 초기화
+                attempts.textContent = `시도 횟수: ${attemptCount}`;
+
+                result.classList.remove('shake', 'show');
+                void result.offsetWidth;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        function launchConfettiAtElement(element) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+
+            for (let i = 0; i < 60; i++) {
+                
+                const confetti = document.createElement("div");
+                confetti.classList.add("confetti-piece");
+
+                const offsetX = Math.random() * 240 - 120;
+                const offsetY = Math.random() * 240 - 120;
+
+                confetti.style.left = `${centerX + offsetX}px`;
+                confetti.style.top = `${centerY + offsetY}px`;
+
+
+                const colors = ['#ff7675', '#74b9ff', '#ffeaa7', '#55efc4', '#fd79a8'];
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+                // 랜덤 이동 방향
+                const angle = Math.random() * 2 * Math.PI;
+                const velocity = Math.random() * 150 + 50;
+                const dx = Math.cos(angle) * velocity;
+                const dy = Math.sin(angle) * velocity;
+
+                confetti.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.random() * 720}deg)`;
+                confetti.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
+
+                document.getElementById("confetti").appendChild(confetti);
+                setTimeout(() => confetti.remove(), 1000);
+                
+            }
+        }
+
+    </script>
+</body>
+</html>
